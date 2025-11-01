@@ -77,34 +77,14 @@
 
 ## Data Structures
 
-### Abstract Classes
-- Always use abstract classes with `class_name` and `@abstract` instead of untyped dictionaries.
+### Typed Classes vs Dictionaries
+- Always use typed classes (`Resource` or `RefCounted`) instead of untyped dictionaries for data structures.
 - Provides type safety, IDE autocomplete, and proper type inference.
-- Use for: base classes for inheritance, data transfer objects, configuration objects, state containers.
-
-#### Abstract Base Classes
-- Use `@abstract` for base classes that define shared behavior but should not be instantiated.
-- Example:
-  ```gdscript
-  @abstract
-  class_name Character
-  extends CharacterBody3D
-  
-  @export var health: int = 100
-  @export var speed: float = 5.0
-  @export var acc: float = 2.5  ## acceleration
-  @export var dec: float = 5.0  ## deceleration
-  ```
-- Extend in child classes:
-  ```gdscript
-  class_name Player
-  extends Character
-  
-  @export var stamina: float = 100.0
-  ```
+- Use for: data transfer objects, configuration objects, state containers.
 
 #### Data Transfer Objects
-- Use typed classes instead of dictionaries to pass data between nodes.
+- Use `Resource` or `RefCounted` classes instead of dictionaries to pass data between nodes.
+- Extend `Resource` for serialization/saving, or `RefCounted` for lightweight data objects.
 - Example:
   ```gdscript
   class_name PlayerData
@@ -129,7 +109,28 @@
   func get_player_info() -> PlayerData:
       return PlayerData.new("Player", 100, Vector3.ZERO)
   ```
-- Extend `Resource` for serialization/saving, or `RefCounted` for lightweight data objects.
+
+### Abstract Base Classes
+- Use `@abstract` for base classes that define shared behavior but cannot be directly instantiated.
+- Abstract classes must extend a Godot type (Node, CharacterBody3D, etc.) and are for inheritance only.
+- Example:
+  ```gdscript
+  @abstract
+  class_name Character
+  extends CharacterBody3D
+  
+  @export var health: int = 100
+  @export var speed: float = 5.0
+  @export var acc: float = 2.5  ## acceleration
+  @export var dec: float = 5.0  ## deceleration
+  ```
+- Extend in child classes:
+  ```gdscript
+  class_name Player
+  extends Character
+  
+  @export var stamina: float = 100.0
+  ```
 
 ## Code Architecture
 
