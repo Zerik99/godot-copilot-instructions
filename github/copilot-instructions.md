@@ -1,24 +1,26 @@
-# Copilot Instructions for gdscript
+# Copilot Instructions for GDScript
+
 ## Code Style
 
 ### Indentation
 - Use tabs for indentation, not spaces.
 
 ### Type System
-- Avoid type inference. Always use explicit static types.
-- Prefer static typed variables: `var player_id: int = 0`
-- Prefer static return types on all functions: `func get_player_id() -> int:`
-- Use const declarations instead of magic numbers and strings: `const MOVE_SPEED: float = 5.0`
+- Always use explicit static types. Never rely on type inference.
+- Variables: `var player_id: int = 0`
+- Function returns: `func get_player_id() -> int:`
+- Constants: `const MOVE_SPEED: float = 5.0`
+- Replace all magic numbers and strings with named constants.
 
 ### Node References
-- Use `@onready` with explicit type annotations and node path syntax for local node references.
+- Use `@onready` with explicit type annotations and node path syntax.
 - Example: `@onready var collision_shape: CollisionShape3D = $CollisionShape3D`
-- This pattern ensures type safety, performance optimization (nodes are cached), and self-documenting code.
-- Always specify the full type name (e.g., `CollisionShape3D`, not inferred types).
+- Always specify the full type name (e.g., `CollisionShape3D`, never inferred types).
+- This ensures type safety, performance (nodes are cached), and self-documenting code.
 
 ### Naming Conventions
-- Use `snake_case` for functions and variables: `var player_position`, `func calculate_damage()`
-- Use `PascalCase` for classes and types: `class PlayerController`, `enum GameState`
+- `snake_case` for functions and variables: `var player_position`, `func calculate_damage()`
+- `PascalCase` for classes and types: `class PlayerController`, `enum GameState`
 - Prefix private functions with underscore: `func _process_input() -> void:`
 
 ## Code Organization
@@ -37,45 +39,149 @@
 
 ## Control Flow
 
-### Conditionals
-- Prefer null checks and early returns over nested conditionals.
-- Example: Use guard clauses to exit early rather than deeply nested if/else blocks.
+- Use null checks and early returns instead of nested conditionals.
+- Use guard clauses to exit early.
+- Example:
+  ```gdscript
+  # Bad: Nested conditionals
+  func process_player(player: Node) -> void:
+      if player != null:
+          if player.is_alive():
+              if player.has_weapon():
+                  player.attack()
+  
+  # Good: Early returns
+  func process_player(player: Node) -> void:
+      if player == null:
+          return
+      if not player.is_alive():
+          return
+      if not player.has_weapon():
+          return
+      player.attack()
+  ```
 
-### Error Handling
-- Prefer explicit error handling over silent failures.
-- Print errors or emit signals when issues occur rather than silently continuing.
+## Error Handling
+
+- Use explicit error handling. Never fail silently.
+- Print errors or emit signals when issues occur.
+- Example:
+  ```gdscript
+  func load_config(path: String) -> bool:
+      if not FileAccess.file_exists(path):
+          push_error("Config file not found: " + path)
+          return false
+      # Load config...
+      return true
+  ```
+
+## Data Structures
+
+### Abstract Classes
+- Always use abstract classes with `class_name` and `@abstract` instead of untyped dictionaries.
+- Provides type safety, IDE autocomplete, and proper type inference.
+- Use for: base classes for inheritance, data transfer objects, configuration objects, state containers.
+
+#### Abstract Base Classes
+- Use `@abstract` for base classes that define shared behavior but should not be instantiated.
+- Example:
+  ```gdscript
+  @abstract
+  class_name Character
+  extends CharacterBody3D
+  
+  @export var health: int = 100
+  @export var speed: float = 5.0
+  @export var acc: float = 2.5  ## acceleration
+  @export var dec: float = 5.0  ## deceleration
+  ```
+- Extend in child classes:
+  ```gdscript
+  class_name Player
+  extends Character
+  
+  @export var stamina: float = 100.0
+  ```
+
+#### Data Transfer Objects
+- Use typed classes instead of dictionaries to pass data between nodes.
+- Example:
+  ```gdscript
+  class_name PlayerData
+  extends Resource
+  
+  var player_name: String = ""
+  var health: int = 100
+  var position: Vector3 = Vector3.ZERO
+  
+  func _init(name: String = "", hp: int = 100, pos: Vector3 = Vector3.ZERO) -> void:
+      player_name = name
+      health = hp
+      position = pos
+  ```
+- Usage:
+  ```gdscript
+  # Bad: Untyped dictionary
+  func get_player_info() -> Dictionary:
+      return {"name": "Player", "health": 100, "position": Vector3.ZERO}
+  
+  # Good: Typed class
+  func get_player_info() -> PlayerData:
+      return PlayerData.new("Player", 100, Vector3.ZERO)
+  ```
+- Extend `Resource` for serialization/saving, or `RefCounted` for lightweight data objects.
 
 ## Code Architecture
 
 ### Composition Over Inheritance
-- Prefer composition and component-based architecture over deep inheritance hierarchies.
-- Use scripts as components that can be attached to nodes rather than creating complex base classes.
-- Keep inheritance chains shallow (ideally 1-2 levels deep).
+- Use composition and component-based architecture instead of deep inheritance hierarchies.
+- Attach scripts as components to nodes rather than creating complex base classes.
+- Keep inheritance chains shallow (1-2 levels maximum).
 
 ### Loose Coupling
 - Avoid tight coupling between systems and scripts.
-- Use signals and event buses (like `EventBus`) for communication between unrelated systems.
-- Pass dependencies explicitly through function parameters or via autoloads when appropriate.
-- Minimize direct node references; prefer finding nodes through paths or using signals.
+- Use signals and event buses for communication between unrelated systems.
+- Pass dependencies explicitly through function parameters or autoloads.
+- Minimize direct node references. Use node paths or signals instead.
 
 ### Modularity
 - Keep scripts focused on a single responsibility.
 - Split large functionality into separate scripts/components.
-- Use the `systems/` directory for cross-cutting concerns and managers.
-- Use the `autoloads/` directory for global services that multiple systems depend on.
+- Organize code:
+  - `systems/` - Cross-cutting concerns and managers
+  - `autoloads/` - Global services used by multiple systems
+
+## Code Patterns
+
+### Event Bus Signals
+- Use public signals (no underscore prefix) in event bus systems.
+- Provide wrapper functions to emit signals. Never emit signals directly from external code.
+- Cache values as private variables with getter functions when needed.
+- Example:
+  ```gdscript
+  signal player_moved(position: Vector3)
+  var _current_player_position: Vector3 = Vector3.ZERO
+  
+  func emit_player_moved(position: Vector3) -> void:
+      _current_player_position = position
+      player_moved.emit(position)
+  
+  func get_player_position() -> Vector3:
+      return _current_player_position
+  ```
+- This provides encapsulation, validation hooks, and a clear API surface.
 
 ## Documentation
 
 ### Code Comments
-- Avoid excess documentation.
-- Prefer self-documenting variable and function names that clarify intent.
+- Avoid excessive documentation.
+- Use self-documenting variable and function names.
 - Only comment non-obvious logic or complex algorithms.
 
 ### Markdown Files
-- Avoid generating documentation (.md) files without being explicitly asked.
-- Allow the user to request documentation generation when needed.
+- Do not generate documentation (.md) files unless explicitly requested.
 
 ### UID Files
- - Do not manually create or edit Godot .uid files (for example `*.tscn.uid` or `*.gd.uid`).
-	 The Godot editor automatically manages and generates these UID files; creating them by hand
-	 can cause conflicts or inconsistent asset metadata. Let the editor handle UID files.
+- Never manually create or edit Godot .uid files (`*.tscn.uid`, `*.gd.uid`, etc.).
+- The Godot editor automatically manages these files.
+- Manual editing causes conflicts and inconsistent asset metadata.
